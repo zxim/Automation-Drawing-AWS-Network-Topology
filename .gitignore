@@ -1,0 +1,24 @@
+# 환경 변수 파일
+.env
+
+# Node.js 관련 (프론트엔드)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python 관련 (백엔드)
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+venv/
+*.sqlite3
+
+# Docker 관련
+docker-compose.override.yml
+*.env
+.DS_Store
+
+# 기타 OS 파일
+Thumbs.db
+.DS_Store

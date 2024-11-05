@@ -1,0 +1,28 @@
+/* src/VPC.css */
+
+.region, .vpc, .subnet, .route-table, .instance {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+  }
+  
+  .region h1, .vpc h2, .subnet h3, .route-table h3, .instance h3 {
+    color: #333;
+    margin-bottom: 10px;
+  }
+  
+  .vpc h3, .subnet p, .route-table p, .instance p {
+    margin: 5px 0;
+  }
+  
+  /* 항목 간 구분을 위한 밑줄 */
+  .subnet:not(:last-child),
+  .route-table:not(:last-child),
+  .instance:not(:last-child) {
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+  
