@@ -18,12 +18,7 @@ function App() {
         setSelectedVpc(vpcId);
         if (vpcId) {
             fetch(`/vpcs/${vpcId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => setVpcDetails(data))
                 .catch(error => console.error('Error fetching VPC details:', error));
         } else {
@@ -34,13 +29,11 @@ function App() {
     return (
         <Router>
             <Routes>
-                {/* 메인 페이지 */}
                 <Route 
                     path="/" 
                     element={
                         <div>
                             <h1>AWS VPC Information</h1>
-                            <p>Select a VPC:</p>
                             <select value={selectedVpc} onChange={(e) => handleVpcSelect(e.target.value)}>
                                 <option value="">Select VPC</option>
                                 {vpcs.map((vpc) => (
@@ -49,13 +42,11 @@ function App() {
                                     </option>
                                 ))}
                             </select>
-
                             {selectedVpc && (
-                                <Link to={`/diagram/${selectedVpc}`} style={{ marginLeft: '10px' }}>
+                                <Link to={`/diagram/${selectedVpc}`}>
                                     <button>Draw Diagram</button>
                                 </Link>
                             )}
-
                             {vpcDetails && (
                                 <div>
                                     <h2>VPC Details</h2>
@@ -154,8 +145,7 @@ function App() {
                         </div>
                     }
                 />
-                {/* 다이어그램 페이지 */}
-                <Route path="/diagram/:vpcId" element={<VPCDiagram />} />
+                <Route path="/diagram/:vpcId" element={<VPCDiagram vpcDetails={vpcDetails} />} />
             </Routes>
         </Router>
     );
