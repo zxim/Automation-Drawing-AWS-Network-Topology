@@ -1,9 +1,9 @@
 # 해당 코드는 아직 미완성인 진행 중인 프로젝트입니다
 # Create a .env File in the Root Directory
 ## .env File Contents
-AWS_ACCESS_KEY_ID: The Access Key ID issued when creating the IAM user <br>
-AWS_SECRET_ACCESS_KEY: The Secret Access Key associated with the IAM user  <br>
-AWS_REGION: The AWS region, for example, 'ap-northeast-2'  <br>
+**AWS_ACCESS_KEY_ID**: The Access Key ID issued when creating the IAM user <br>
+**AWS_SECRET_ACCESS_KEY**: The Secret Access Key associated with the IAM user  <br>
+**AWS_REGION**: The AWS region, for example, 'ap-northeast-2'  <br>
 
 <br>
 
@@ -30,8 +30,8 @@ Description: This role is automatically created by AWS for use with the Elastic 
 <br>
 
 ## AWSServiceRoleForRDS
-Trusted Entity: AWS Service (rds)
-Description: This role is automatically created by AWS for Amazon RDS (Relational Database Service) and allows for monitoring and management tasks for database instances.
+**Trusted Entity**: AWS Service (rds)
+**Description**: This role is automatically created by AWS for Amazon RDS (Relational Database Service) and allows for monitoring and management tasks for database instances.
 
 <br>
 
