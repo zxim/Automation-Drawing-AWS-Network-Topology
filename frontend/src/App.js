@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
 import VPCDiagram from './VPCDiagram';
+import TopologyDiagram from './TopologyDiagram';
+import './App.css';
 
 function App() {
     const [vpcs, setVpcs] = useState([]);
     const [selectedVpc, setSelectedVpc] = useState("");
     const [vpcDetails, setVpcDetails] = useState(null);
+    const [topologyData, setTopologyData] = useState(null);
+
+    const region = "ap-northeast-2"; // 예시: 서울 리전
 
     useEffect(() => {
         fetch('/vpcs')
@@ -19,18 +24,69 @@ function App() {
         if (vpcId) {
             fetch(`/vpcs/${vpcId}`)
                 .then(response => response.json())
-                .then(data => setVpcDetails(data))
+                .then(data => {
+                    data.RouteTables.forEach(routeTable => {
+                        if (routeTable.Associations) {
+                            routeTable.Associations.forEach(assoc => {
+                                const subnetId = assoc;
+                                if (subnetId) {
+                                    const subnet = data.Subnets.find(s => s["Subnet ID"] === subnetId);
+                                    if (subnet) {
+                                        subnet["RouteTableID"] = routeTable["Route Table ID"];
+                                    }
+                                }
+                            });
+                        }
+                    });
+                    data.State = region;
+                    setVpcDetails(data);
+
+                    // Create topology data from VPC details
+                    const topology = {
+                        vpcName: data.Name || data["VPC ID"],
+                        azs: data.Subnets.reduce((acc, subnet) => {
+                            const az = acc.find(a => a.name === subnet["Availability Zone"]);
+                            if (az) {
+                                az.subnets.push({
+                                    name: subnet.Name || subnet["Subnet ID"],
+                                    instances: data.Instances.filter(
+                                        instance => instance["Subnet ID"] === subnet["Subnet ID"]
+                                    ).map(instance => ({
+                                        name: instance.Name || instance["Instance ID"],
+                                    })),
+                                });
+                            } else {
+                                acc.push({
+                                    name: subnet["Availability Zone"],
+                                    subnets: [
+                                        {
+                                            name: subnet.Name || subnet["Subnet ID"],
+                                            instances: data.Instances.filter(
+                                                instance => instance["Subnet ID"] === subnet["Subnet ID"]
+                                            ).map(instance => ({
+                                                name: instance.Name || instance["Instance ID"],
+                                            })),
+                                        },
+                                    ],
+                                });
+                            }
+                            return acc;
+                        }, []),
+                    };
+                    setTopologyData(topology);
+                })
                 .catch(error => console.error('Error fetching VPC details:', error));
         } else {
             setVpcDetails(null);
+            setTopologyData(null);
         }
     };
 
     return (
         <Router>
             <Routes>
-                <Route 
-                    path="/" 
+                <Route
+                    path="/"
                     element={
                         <div>
                             <h1>AWS VPC Information</h1>
@@ -43,38 +99,67 @@ function App() {
                                 ))}
                             </select>
                             {selectedVpc && (
-                                <Link to={`/diagram/${selectedVpc}`}>
-                                    <button>Draw Diagram</button>
-                                </Link>
+                                <>
+                                    <Link to={`/diagram/${selectedVpc}`}>
+                                        <button>Draw Diagram</button>
+                                    </Link>
+                                    <Link to={`/topology/${selectedVpc}`}>
+                                        <button>Draw Topology</button>
+                                    </Link>
+                                </>
                             )}
                             {vpcDetails && (
                                 <div>
                                     <h2>VPC Details</h2>
                                     <table border="1">
                                         <tbody>
+                                            <tr><th>VPC Name</th><td>{vpcDetails.Name}</td></tr>
                                             <tr><th>VPC ID</th><td>{vpcDetails["VPC ID"]}</td></tr>
-                                            <tr><th>State</th><td>{vpcDetails.State}</td></tr>
+                                            <tr><th>State (Region)</th><td>{vpcDetails.State}</td></tr>
                                         </tbody>
                                     </table>
+                                    <h3>Internet Gateway</h3>
+                                    {vpcDetails.InternetGateway ? (
+                                        <table border="1">
+                                            <thead>
+                                                <tr>
+                                                    <th>Gateway Name</th>
+                                                    <th>Gateway ID</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>{vpcDetails.InternetGateway.Name || 'N/A'}</td>
+                                                    <td>{vpcDetails.InternetGateway["GatewayId"] || 'N/A'}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <p>No Internet Gateway available for this VPC.</p>
+                                    )}
 
                                     <h3>Subnets</h3>
                                     {vpcDetails.Subnets.length > 0 ? (
                                         <table border="1">
                                             <thead>
                                                 <tr>
+                                                    <th>Subnet Name</th>
                                                     <th>Subnet ID</th>
                                                     <th>CIDR Block</th>
                                                     <th>Availability Zone</th>
                                                     <th>State</th>
+                                                    <th>Route Table ID</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {vpcDetails.Subnets.map((subnet, index) => (
                                                     <tr key={index}>
+                                                        <td>{subnet.Name || 'N/A'}</td>
                                                         <td>{subnet["Subnet ID"]}</td>
                                                         <td>{subnet["CIDR Block"]}</td>
                                                         <td>{subnet["Availability Zone"]}</td>
                                                         <td>{subnet.State}</td>
+                                                        <td>{subnet["RouteTableID"] || 'N/A'}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -82,70 +167,13 @@ function App() {
                                     ) : (
                                         <p>No subnets available for this VPC.</p>
                                     )}
-
-                                    <h3>Route Tables</h3>
-                                    {vpcDetails.RouteTables.length > 0 ? (
-                                        <table border="1">
-                                            <thead>
-                                                <tr>
-                                                    <th>Route Table ID</th>
-                                                    <th>Routes</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {vpcDetails.RouteTables.map((routeTable, index) => (
-                                                    <tr key={index}>
-                                                        <td>{routeTable["Route Table ID"]}</td>
-                                                        <td>
-                                                            <ul>
-                                                                {routeTable.Routes.map((route, routeIndex) => (
-                                                                    <li key={routeIndex}>
-                                                                        Destination: {route.Destination}, Target: {route.Target}
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    ) : (
-                                        <p>No route tables available for this VPC.</p>
-                                    )}
-
-                                    <h3>Instances</h3>
-                                    {vpcDetails.Instances.length > 0 ? (
-                                        <table border="1">
-                                            <thead>
-                                                <tr>
-                                                    <th>Instance ID</th>
-                                                    <th>Instance Type</th>
-                                                    <th>Private IP</th>
-                                                    <th>Public IP</th>
-                                                    <th>State</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {vpcDetails.Instances.map((instance, index) => (
-                                                    <tr key={index}>
-                                                        <td>{instance["Instance ID"]}</td>
-                                                        <td>{instance["Instance Type"]}</td>
-                                                        <td>{instance["Private IP"]}</td>
-                                                        <td>{instance["Public IP"]}</td>
-                                                        <td>{instance.State}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    ) : (
-                                        <p>No instances available for this VPC.</p>
-                                    )}
                                 </div>
                             )}
                         </div>
                     }
                 />
                 <Route path="/diagram/:vpcId" element={<VPCDiagram vpcDetails={vpcDetails} />} />
+                <Route path="/topology/:vpcId" element={<TopologyDiagram topologyData={topologyData} />} />
             </Routes>
         </Router>
     );
