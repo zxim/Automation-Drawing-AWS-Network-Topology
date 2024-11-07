@@ -1,8 +1,8 @@
 services:
   backend:
     build:
-      context: ./backend  # Dockerfile이 있는 폴더를 지정
-      dockerfile: Dockerfile  # Dockerfile의 파일 이름
+      context: ./backend
+      dockerfile: Dockerfile
     volumes:
       - ./backend:/app
     ports:
@@ -19,6 +19,6 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
-      - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - ENV CHOKIDAR_INTERVAL=1000 

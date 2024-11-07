@@ -8,8 +8,12 @@ WORKDIR /app
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 환경 변수 설정
+ENV FLASK_APP=app.py
+ENV FLASK_ENV=development  
+
 # 소스 코드 복사
 COPY . .
 
 # Flask 서버 실행
-CMD ["python", "app.py"]
+CMD ["flask", "run", "--host=0.0.0.0"]

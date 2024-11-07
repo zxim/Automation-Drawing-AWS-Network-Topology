@@ -43,6 +43,7 @@ function App() {
 
                     // Create topology data from VPC details
                     const topology = {
+                        regionName: region,  // 리전 이름 추가
                         vpcName: data.Name || data["VPC ID"],
                         azs: data.Subnets.reduce((acc, subnet) => {
                             const az = acc.find(a => a.name === subnet["Availability Zone"]);
@@ -173,7 +174,7 @@ function App() {
                     }
                 />
                 <Route path="/diagram/:vpcId" element={<VPCDiagram vpcDetails={vpcDetails} />} />
-                <Route path="/topology/:vpcId" element={<TopologyDiagram topologyData={topologyData} />} />
+                <Route path="/topology/:vpcId" element={<TopologyDiagram topologyData={topologyData} regionName={region} />} />
             </Routes>
         </Router>
     );
