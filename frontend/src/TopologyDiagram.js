@@ -13,6 +13,8 @@ const DynamicTopology = ({ topologyData, regionName }) => {
         ? (topologyData.azs[0].subnets.length * subnetWidth) - 100 
         : 400;
     const azHeight = 300;
+    const regionToVpcSpacing = 200; // 리전과 VPC 간의 거리
+    const vpcToAzSpacing = 200; // VPC와 AZ 간의 거리
     const azSpacing = 150; // AZ 간의 간격
     const subnetSpacing = 50;
     const instanceSize = 100;
@@ -29,19 +31,21 @@ const DynamicTopology = ({ topologyData, regionName }) => {
         elements.push({
             data: { id: 'region', label: `Region: ${regionName}` },
             classes: 'region',
+            position: { x: regionWidth / 2, y: regionToVpcSpacing }
         });
 
         // VPC node within Region
         elements.push({
             data: { id: 'vpc', label: `VPC: ${topologyData.vpcName}`, parent: 'region' },
             classes: 'vpc',
+            position: { x: regionWidth / 2, y: regionToVpcSpacing + 150 }
         });
 
         // AZs
         topologyData.azs.forEach((az, azIndex) => {
             const azNodeId = `az-${azIndex}`;
             const azPositionX = 300; // AZ의 x축 위치 (세로로 나열)
-            const azPositionY = 100 + azIndex * (azHeight + azSpacing); // AZ 간의 세로 간격을 설정
+            const azPositionY = regionToVpcSpacing + 150 + azIndex * (azHeight + vpcToAzSpacing); // VPC와 AZ 간 거리 포함
 
             elements.push({
                 data: { id: azNodeId, label: `AZ: ${az.name}`, parent: 'vpc' },
@@ -49,7 +53,7 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                 position: { x: azPositionX, y: azPositionY }
             });
 
-            // 같은 AZ 내의 서브넷을 같은 y값에 배치하고, 인스턴스를 서브넷의 중앙에 위치
+            // 서브넷 크기 고정, 인스턴스 유무와 관계없이 동일 크기
             az.subnets.forEach((subnet, subnetIndex) => {
                 const subnetNodeId = `subnet-${azIndex}-${subnetIndex}`;
                 const subnetPositionX = azPositionX + subnetIndex * (subnetWidth + subnetSpacing); // 서브넷 가로 위치
@@ -58,7 +62,8 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                 elements.push({
                     data: { id: subnetNodeId, label: `Subnet: ${subnet.name}`, parent: azNodeId },
                     classes: 'subnet',
-                    position: { x: subnetPositionX, y: subnetPositionY }
+                    position: { x: subnetPositionX, y: subnetPositionY },
+                    style: { width: subnetWidth, height: subnetHeight } // 서브넷 크기 고정
                 });
 
                 subnet.instances.forEach((instance, instanceIndex) => {
@@ -93,7 +98,14 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'label': 'data(label)',
                         'width': regionWidth,
                         'height': regionHeight,
-                        'shape': 'rectangle'
+                        'shape': 'rectangle',
+                        'background-image': 'url("/icons/region.png")',
+                        'background-fit': 'none',
+                        'background-clip': 'none',
+                        'background-width': '25px',
+                        'background-height': '25px',
+                        'background-position-x': '5px',
+                        'background-position-y': '5px'
                     }
                 },
                 {
@@ -103,7 +115,13 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'border-width': 3,
                         'border-color': '#1f78b4',
                         'label': 'data(label)',
-                        'shape': 'rectangle'
+                        'background-image': 'url("/icons/vpc.png")',
+                        'background-fit': 'none',
+                        'background-clip': 'none',
+                        'background-width': '25px',
+                        'background-height': '25px',
+                        'background-position-x': '5px',
+                        'background-position-y': '5px'
                     }
                 },
                 {
@@ -131,23 +149,33 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'height': subnetHeight,
                         'min-width': subnetWidth,
                         'min-height': subnetHeight,
-                        'padding-left': 10,
-                        'padding-right': 10,
-                        'padding-top': 10,
-                        'padding-bottom': 10,
+                        'background-image': 'url("/icons/subnet.png")',
+                        'background-fit': 'none',
+                        'background-clip': 'none',
+                        'background-width': '25px',
+                        'background-height': '25px',
+                        'background-position-x': '5px',
+                        'background-position-y': '5px',
                         'shape': 'rectangle'
                     }
                 },
                 {
                     selector: '.instance',
                     style: {
-                        'background-color': '#a6cee3',
+                        'background-opacity': 0,
+                        'border-width': 2,
+                        'border-color': '#a6cee3',
                         'label': 'data(label)',
                         'width': instanceSize,
                         'height': instanceSize,
-                        'min-width': instanceSize,
-                        'min-height': instanceSize,
-                        'shape': 'rectangle'
+                        'shape': 'rectangle',
+                        'background-image': 'url("/icons/instance.png")',
+                        'background-fit': 'none',
+                        'background-clip': 'none',
+                        'background-width': '25px',
+                        'background-height': '25px',
+                        'background-position-x': '5px',
+                        'background-position-y': '5px'
                     }
                 }
             ],
