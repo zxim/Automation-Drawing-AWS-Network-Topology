@@ -53,7 +53,7 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                 position: { x: azPositionX, y: azPositionY }
             });
 
-            // 서브넷 크기 고정, 인스턴스 유무와 관계없이 동일 크기
+            // 서브넷 추가, 인스턴스 유무와 관계없이 동일 크기
             az.subnets.forEach((subnet, subnetIndex) => {
                 const subnetNodeId = `subnet-${azIndex}-${subnetIndex}`;
                 const subnetPositionX = azPositionX + subnetIndex * (subnetWidth + subnetSpacing); // 서브넷 가로 위치
@@ -62,8 +62,7 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                 elements.push({
                     data: { id: subnetNodeId, label: `Subnet: ${subnet.name}`, parent: azNodeId },
                     classes: 'subnet',
-                    position: { x: subnetPositionX, y: subnetPositionY },
-                    style: { width: subnetWidth, height: subnetHeight } // 서브넷 크기 고정
+                    position: { x: subnetPositionX, y: subnetPositionY }
                 });
 
                 subnet.instances.forEach((instance, instanceIndex) => {
@@ -119,7 +118,7 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'background-fit': 'none',
                         'background-clip': 'none',
                         'background-width': '25px',
-                        'background-height': '25px',
+                        'background-height': '20px',
                         'background-position-x': '5px',
                         'background-position-y': '5px'
                     }
