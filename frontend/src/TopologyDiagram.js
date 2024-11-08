@@ -13,10 +13,10 @@ const DynamicTopology = ({ topologyData, regionName }) => {
         ? (topologyData.azs[0].subnets.length * subnetWidth) - 100 
         : 400;
     const azHeight = 300;
-    const regionToVpcSpacing = 200; // 리전과 VPC 간의 거리
-    const vpcToAzSpacing = 200; // VPC와 AZ 간의 거리
-    const azSpacing = 150; // AZ 간의 간격
-    const subnetSpacing = 50;
+    const regionToVpcSpacing = 200;
+    const vpcToAzSpacing = 200;
+    const azSpacing = 150;
+    const subnetSpacing = 100;
     const instanceSize = 100;
 
     useEffect(() => {
@@ -41,11 +41,11 @@ const DynamicTopology = ({ topologyData, regionName }) => {
             position: { x: regionWidth / 2, y: regionToVpcSpacing + 150 }
         });
 
-        // AZs
-        topologyData.azs.forEach((az, azIndex) => {
+        // AZs (only if present)
+        topologyData.azs?.forEach((az, azIndex) => {
             const azNodeId = `az-${azIndex}`;
-            const azPositionX = 300; // AZ의 x축 위치 (세로로 나열)
-            const azPositionY = regionToVpcSpacing + 150 + azIndex * (azHeight + vpcToAzSpacing); // VPC와 AZ 간 거리 포함
+            const azPositionX = 300;
+            const azPositionY = regionToVpcSpacing + 150 + azIndex * (azHeight + vpcToAzSpacing);
 
             elements.push({
                 data: { id: azNodeId, label: `AZ: ${az.name}`, parent: 'vpc' },
@@ -53,11 +53,11 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                 position: { x: azPositionX, y: azPositionY }
             });
 
-            // 서브넷 추가, 인스턴스 유무와 관계없이 동일 크기
-            az.subnets.forEach((subnet, subnetIndex) => {
+            // Subnets (only if present)
+            az.subnets?.forEach((subnet, subnetIndex) => {
                 const subnetNodeId = `subnet-${azIndex}-${subnetIndex}`;
-                const subnetPositionX = azPositionX + subnetIndex * (subnetWidth + subnetSpacing); // 서브넷 가로 위치
-                const subnetPositionY = azPositionY; // 같은 AZ 내에서는 같은 y값에 위치
+                const subnetPositionX = azPositionX + subnetIndex * (subnetWidth + subnetSpacing);
+                const subnetPositionY = azPositionY;
 
                 elements.push({
                     data: { id: subnetNodeId, label: `Subnet: ${subnet.name}`, parent: azNodeId },
@@ -65,11 +65,24 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                     position: { x: subnetPositionX, y: subnetPositionY }
                 });
 
-                subnet.instances.forEach((instance, instanceIndex) => {
-                    const instanceNodeId = `instance-${azIndex}-${subnetIndex}-${instanceIndex}`;
-                    const instancePositionX = subnetPositionX; // 서브넷의 x값과 동일
-                    const instancePositionY = subnetPositionY; // 서브넷 중앙에 인스턴스를 배치
+                // Fixed position for Route Table in the subnet
+                const routeTablePositionX = subnetPositionX + 20;
+                const routeTablePositionY = subnetPositionY + subnetHeight / 2 - 20;
 
+                elements.push({
+                    data: { id: `routeTable-${azIndex}-${subnetIndex}`, label: 'Route Table', parent: subnetNodeId },
+                    classes: 'route-table',
+                    position: { x: routeTablePositionX, y: routeTablePositionY },
+                    style: { width: 60, height: 60 }
+                });
+
+                // Fixed position for Instance in the subnet
+                const instancePositionX = routeTablePositionX + 120;
+                const instancePositionY = routeTablePositionY;
+
+                subnet.instances?.forEach((instance, instanceIndex) => {
+                    const instanceNodeId = `instance-${azIndex}-${subnetIndex}-${instanceIndex}`;
+                    
                     elements.push({
                         data: { id: instanceNodeId, label: `Instance: ${instance.name}`, parent: subnetNodeId },
                         classes: 'instance',
@@ -79,6 +92,24 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                 });
             });
         });
+
+        // Gateway (if present)
+        if (topologyData.gateway) {
+            elements.push({
+                data: { id: 'gateway', label: `Gateway: ${topologyData.gateway}`, parent: 'vpc' },
+                classes: 'gateway',
+                position: { x: regionWidth / 2, y: regionToVpcSpacing + 250 }
+            });
+        }
+
+        // Route Table (if present)
+        if (topologyData.routeTable) {
+            elements.push({
+                data: { id: 'routeTable', label: `Route Table: ${topologyData.routeTable}`, parent: 'vpc' },
+                classes: 'routeTable',
+                position: { x: regionWidth / 2 + 200, y: regionToVpcSpacing + 250 }
+            });
+        }
 
         if (cyRef.current) {
             cyRef.current.destroy();
@@ -102,7 +133,7 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'background-fit': 'none',
                         'background-clip': 'none',
                         'background-width': '25px',
-                        'background-height': '25px',
+                        'background-height': '20px',
                         'background-position-x': '5px',
                         'background-position-y': '5px'
                     }
@@ -146,6 +177,7 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'label': 'data(label)',
                         'width': subnetWidth,
                         'height': subnetHeight,
+                        'shape': 'rectangle',
                         'min-width': subnetWidth,
                         'min-height': subnetHeight,
                         'background-image': 'url("/icons/subnet.png")',
@@ -154,8 +186,7 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'background-width': '25px',
                         'background-height': '25px',
                         'background-position-x': '5px',
-                        'background-position-y': '5px',
-                        'shape': 'rectangle'
+                        'background-position-y': '5px'
                     }
                 },
                 {
@@ -171,10 +202,54 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'background-image': 'url("/icons/instance.png")',
                         'background-fit': 'none',
                         'background-clip': 'none',
-                        'background-width': '25px',
-                        'background-height': '25px',
-                        'background-position-x': '5px',
-                        'background-position-y': '5px'
+                        'background-width': '60px',
+                        'background-height': '60px',
+                        'background-position-x': '50%',
+                        'background-position-y': '50%'
+                    }
+                },
+                {
+                    selector: '.route-table',
+                    style: {
+                        'background-opacity': 0,
+                        'border-width': 2,
+                        'border-color': '#6a3d9a',
+                        'label': 'data(label)',
+                        'width': 60,
+                        'height': 60,
+                        'background-image': 'url("/icons/route-table.png")',
+                        'background-fit': 'cover',
+                        'background-position-x': '50%',
+                        'background-position-y': '50%',
+                        'shape': 'rectangle'
+                    }
+                },
+                {
+                    selector: '.gateway',
+                    style: {
+                        'background-opacity': 0,
+                        'border-width': 2,
+                        'border-color': '#d62728',
+                        'label': 'data(label)',
+                        'shape': 'ellipse',
+                        'width': 50,
+                        'height': 50,
+                        'background-image': 'url("/icons/gateway.png")',
+                        'background-fit': 'cover'
+                    }
+                },
+                {
+                    selector: '.routeTable',
+                    style: {
+                        'background-opacity': 0,
+                        'border-width': 2,
+                        'border-color': '#9467bd',
+                        'label': 'data(label)',
+                        'shape': 'rectangle',
+                        'width': 100,
+                        'height': 50,
+                        'background-image': 'url("/icons/routetable.png")',
+                        'background-fit': 'cover'
                     }
                 }
             ],
