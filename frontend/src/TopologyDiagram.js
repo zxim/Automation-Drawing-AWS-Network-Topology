@@ -1,23 +1,24 @@
 import React, { useEffect, useRef } from 'react';
 import cytoscape from 'cytoscape';
 
-const DynamicTopology = ({ topologyData, regionName }) => {
+const TopologyDiagram = ({ topologyData, regionName }) => {
     const cyRef = useRef(null);
 
     // Constants for dimensions
     const regionWidth = 1200;
-    const regionHeight = 800;
-    const subnetWidth = 350;
-    const subnetHeight = 250;
+    const regionHeight = 850;  // 리전 박스의 높이를 살짝 증가
+    const vpcHeight = 850;     // VPC 박스의 높이를 살짝 증가
+    const subnetWidth = 200;
+    const subnetHeight = 200;
     const azWidth = topologyData && topologyData.azs.length > 0 
-        ? (topologyData.azs[0].subnets.length * subnetWidth) - 100 
+        ? (topologyData.azs[0].subnets.length * subnetWidth) - 50 
         : 400;
-    const azHeight = 300;
-    const regionToVpcSpacing = 200;
-    const vpcToAzSpacing = 200;
-    const azSpacing = 150;
-    const subnetSpacing = 100;
-    const instanceSize = 100;
+    const azHeight = 250;  // AZ 박스 세로 길이 감소
+    const regionToVpcSpacing = 200;  // 리전과 VPC 간의 거리 증가
+    const vpcToAzSpacing = 100;      // VPC와 AZ 간의 거리 증가
+    const azSpacing = 50; 
+    const subnetSpacing = 50;
+    const instanceSize = 80;
 
     useEffect(() => {
         if (!topologyData || !topologyData.vpcName) {
@@ -27,25 +28,22 @@ const DynamicTopology = ({ topologyData, regionName }) => {
 
         const elements = [];
 
-        // Region node
         elements.push({
             data: { id: 'region', label: `Region: ${regionName}` },
             classes: 'region',
             position: { x: regionWidth / 2, y: regionToVpcSpacing }
         });
 
-        // VPC node within Region
         elements.push({
             data: { id: 'vpc', label: `VPC: ${topologyData.vpcName}`, parent: 'region' },
             classes: 'vpc',
-            position: { x: regionWidth / 2, y: regionToVpcSpacing + 150 }
+            position: { x: regionWidth / 2, y: regionToVpcSpacing + vpcToAzSpacing }
         });
 
-        // AZs (only if present)
         topologyData.azs?.forEach((az, azIndex) => {
             const azNodeId = `az-${azIndex}`;
             const azPositionX = 300;
-            const azPositionY = regionToVpcSpacing + 150 + azIndex * (azHeight + vpcToAzSpacing);
+            const azPositionY = regionToVpcSpacing + vpcToAzSpacing + azIndex * (azHeight + azSpacing);
 
             elements.push({
                 data: { id: azNodeId, label: `AZ: ${az.name}`, parent: 'vpc' },
@@ -53,19 +51,22 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                 position: { x: azPositionX, y: azPositionY }
             });
 
-            // Subnets (only if present)
-            az.subnets?.forEach((subnet, subnetIndex) => {
+            const sortedSubnets = [...az.subnets].sort((a, b) => (a.isNatConnected ? -1 : 1));
+
+            sortedSubnets.forEach((subnet, subnetIndex) => {
                 const subnetNodeId = `subnet-${azIndex}-${subnetIndex}`;
                 const subnetPositionX = azPositionX + subnetIndex * (subnetWidth + subnetSpacing);
                 const subnetPositionY = azPositionY;
 
+                const isNatConnected = subnet.isNatConnected;
+                const subnetClass = isNatConnected ? 'public-subnet' : 'private-subnet';
+
                 elements.push({
-                    data: { id: subnetNodeId, label: `Subnet: ${subnet.name}`, parent: azNodeId },
-                    classes: 'subnet',
+                    data: { id: subnetNodeId, label: subnet.name, parent: azNodeId },
+                    classes: `subnet ${subnetClass}`,
                     position: { x: subnetPositionX, y: subnetPositionY }
                 });
 
-                // Fixed position for Route Table in the subnet
                 const routeTablePositionX = subnetPositionX + 20;
                 const routeTablePositionY = subnetPositionY + subnetHeight / 2 - 20;
 
@@ -76,40 +77,20 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                     style: { width: 60, height: 60 }
                 });
 
-                // Fixed position for Instance in the subnet
-                const instancePositionX = routeTablePositionX + 120;
-                const instancePositionY = routeTablePositionY;
+                const infoPositionX = routeTablePositionX + 120;
+                const infoPositionY = routeTablePositionY;
 
-                subnet.instances?.forEach((instance, instanceIndex) => {
-                    const instanceNodeId = `instance-${azIndex}-${subnetIndex}-${instanceIndex}`;
-                    
-                    elements.push({
-                        data: { id: instanceNodeId, label: `Instance: ${instance.name}`, parent: subnetNodeId },
-                        classes: 'instance',
-                        position: { x: instancePositionX, y: instancePositionY },
-                        style: { width: instanceSize, height: instanceSize }
-                    });
+                elements.push({
+                    data: {
+                        id: isNatConnected ? `nat-info-${azIndex}-${subnetIndex}` : `private-instance-${azIndex}-${subnetIndex}`,
+                        label: isNatConnected ? 'NAT' : 'Private Instance',
+                        parent: subnetNodeId
+                    },
+                    classes: isNatConnected ? 'nat-info' : 'private-instance',
+                    position: { x: infoPositionX, y: infoPositionY }
                 });
             });
         });
-
-        // Gateway (if present)
-        if (topologyData.gateway) {
-            elements.push({
-                data: { id: 'gateway', label: `Gateway: ${topologyData.gateway}`, parent: 'vpc' },
-                classes: 'gateway',
-                position: { x: regionWidth / 2, y: regionToVpcSpacing + 250 }
-            });
-        }
-
-        // Route Table (if present)
-        if (topologyData.routeTable) {
-            elements.push({
-                data: { id: 'routeTable', label: `Route Table: ${topologyData.routeTable}`, parent: 'vpc' },
-                classes: 'routeTable',
-                position: { x: regionWidth / 2 + 200, y: regionToVpcSpacing + 250 }
-            });
-        }
 
         if (cyRef.current) {
             cyRef.current.destroy();
@@ -130,10 +111,8 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'height': regionHeight,
                         'shape': 'rectangle',
                         'background-image': 'url("/icons/region.png")',
-                        'background-fit': 'none',
-                        'background-clip': 'none',
-                        'background-width': '25px',
-                        'background-height': '20px',
+                        'background-width': '35px',
+                        'background-height': '30px',
                         'background-position-x': '5px',
                         'background-position-y': '5px'
                     }
@@ -146,10 +125,8 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'border-color': '#1f78b4',
                         'label': 'data(label)',
                         'background-image': 'url("/icons/vpc.png")',
-                        'background-fit': 'none',
-                        'background-clip': 'none',
-                        'background-width': '25px',
-                        'background-height': '20px',
+                        'background-width': '35px',
+                        'background-height': '30px',
                         'background-position-x': '5px',
                         'background-position-y': '5px'
                     }
@@ -163,9 +140,8 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'label': 'data(label)',
                         'width': azWidth,
                         'height': azHeight,
-                        'min-width': azWidth,
-                        'min-height': azHeight,
-                        'shape': 'rectangle'
+                        'shape': 'rectangle',
+                        'min-height': azHeight
                     }
                 },
                 {
@@ -175,14 +151,19 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'border-width': 2,
                         'border-color': '#ff7f00',
                         'label': 'data(label)',
+                        'text-valign': 'top',
+                        'text-halign': 'center',
                         'width': subnetWidth,
                         'height': subnetHeight,
                         'shape': 'rectangle',
                         'min-width': subnetWidth,
-                        'min-height': subnetHeight,
-                        'background-image': 'url("/icons/subnet.png")',
-                        'background-fit': 'none',
-                        'background-clip': 'none',
+                        'min-height': subnetHeight
+                    }
+                },
+                {
+                    selector: '.public-subnet',
+                    style: {
+                        'background-image': 'url("/icons/public-subnet.png")',
                         'background-width': '25px',
                         'background-height': '25px',
                         'background-position-x': '5px',
@@ -190,22 +171,47 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                     }
                 },
                 {
-                    selector: '.instance',
+                    selector: '.private-subnet',
                     style: {
-                        'background-opacity': 0,
+                        'background-image': 'url("/icons/private-subnet.png")',
+                        'background-width': '25px',
+                        'background-height': '25px',
+                        'background-position-x': '5px',
+                        'background-position-y': '5px'
+                    }
+                },
+                {
+                    selector: '.nat-info',
+                    style: {
+                        'background-opacity': 0.1,
                         'border-width': 2,
-                        'border-color': '#a6cee3',
+                        'border-color': '#ffa07a',
                         'label': 'data(label)',
+                        'text-valign': 'top',
+                        'text-halign': 'center',
                         'width': instanceSize,
                         'height': instanceSize,
                         'shape': 'rectangle',
-                        'background-image': 'url("/icons/instance.png")',
-                        'background-fit': 'none',
-                        'background-clip': 'none',
-                        'background-width': '60px',
-                        'background-height': '60px',
+                        'background-image': 'url("/icons/NAT-Gateway.png")',
+                        'background-width': '50px',
+                        'background-height': '45px',
                         'background-position-x': '50%',
                         'background-position-y': '50%'
+                    }
+                },
+                {
+                    selector: '.private-instance',
+                    style: {
+                        'background-opacity': 0.1,
+                        'border-width': 2,
+                        'border-color': '#a6cee3',
+                        'label': 'data(label)',
+                        'text-valign': 'top',
+                        'text-halign': 'center',
+                        'width': instanceSize,
+                        'height': instanceSize,
+                        'shape': 'rectangle',
+                        'background-image': 'url("/icons/instance.png")'
                     }
                 },
                 {
@@ -217,39 +223,8 @@ const DynamicTopology = ({ topologyData, regionName }) => {
                         'label': 'data(label)',
                         'width': 60,
                         'height': 60,
-                        'background-image': 'url("/icons/route-table.png")',
-                        'background-fit': 'cover',
-                        'background-position-x': '50%',
-                        'background-position-y': '50%',
-                        'shape': 'rectangle'
-                    }
-                },
-                {
-                    selector: '.gateway',
-                    style: {
-                        'background-opacity': 0,
-                        'border-width': 2,
-                        'border-color': '#d62728',
-                        'label': 'data(label)',
-                        'shape': 'ellipse',
-                        'width': 50,
-                        'height': 50,
-                        'background-image': 'url("/icons/gateway.png")',
-                        'background-fit': 'cover'
-                    }
-                },
-                {
-                    selector: '.routeTable',
-                    style: {
-                        'background-opacity': 0,
-                        'border-width': 2,
-                        'border-color': '#9467bd',
-                        'label': 'data(label)',
                         'shape': 'rectangle',
-                        'width': 100,
-                        'height': 50,
-                        'background-image': 'url("/icons/routetable.png")',
-                        'background-fit': 'cover'
+                        'background-image': 'url("/icons/route-table.png")'
                     }
                 }
             ],
@@ -257,7 +232,7 @@ const DynamicTopology = ({ topologyData, regionName }) => {
             zoom: 1,
             pan: { x: 0, y: 0 }
         });
-    }, [topologyData, regionName, regionWidth, regionHeight, azWidth, azHeight, subnetWidth, subnetHeight, azSpacing, subnetSpacing, instanceSize]);
+    }, [topologyData, regionName]);
 
     return (
         <div style={{ width: '100vw', height: '100vh' }}>
@@ -267,4 +242,4 @@ const DynamicTopology = ({ topologyData, regionName }) => {
     );
 };
 
-export default DynamicTopology;
+export default TopologyDiagram;

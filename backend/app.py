@@ -42,6 +42,7 @@ def list_vpcs():
 
         return jsonify(vpc_data)
     except Exception as e:
+        print(f"Error in list_vpcs: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/vpcs/<vpc_id>', methods=['GET'])
@@ -59,7 +60,7 @@ def get_vpc_details(vpc_id):
             "InternetGateway": None
         }
 
-        # 서브넷 정보 추가
+        # Subnet information
         subnets = ec2.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])['Subnets']
         for subnet in subnets:
             subnet_name = next((tag['Value'] for tag in subnet.get("Tags", []) if tag["Key"] == "Name"), "N/A")
@@ -69,15 +70,23 @@ def get_vpc_details(vpc_id):
                 "Availability Zone": subnet.get("AvailabilityZone"),
                 "State": subnet.get("State"),
                 "Name": subnet_name,
-                "RouteTableID": None  # 라우팅 테이블 ID를 나중에 할당
+                "RouteTableID": None,
+                "isNatConnected": False  # 기본값 설정
             })
 
-        # 라우팅 테이블 정보 추가
+        # Route Table information
         route_tables = ec2.describe_route_tables(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])['RouteTables']
         for route_table in route_tables:
             route_table_name = next((tag['Value'] for tag in route_table.get("Tags", []) if tag["Key"] == "Name"), "N/A")
             routes = [{"Destination": route.get("DestinationCidrBlock"), "Target": route.get("GatewayId", "N/A")} for route in route_table.get("Routes", [])]
             associations = [assoc.get("SubnetId") for assoc in route_table.get("Associations", []) if assoc.get("SubnetId")]
+            
+            for subnet_id in associations:
+                subnet = next((s for s in vpc_info["Subnets"] if s["Subnet ID"] == subnet_id), None)
+                if subnet:
+                    subnet["RouteTableID"] = route_table.get("RouteTableId")
+                    subnet["isNatConnected"] = any(route.get("Target") and "igw-" in route.get("Target") for route in routes)
+
             vpc_info["RouteTables"].append({
                 "Route Table ID": route_table.get("RouteTableId"),
                 "Routes": routes,
@@ -85,14 +94,7 @@ def get_vpc_details(vpc_id):
                 "AssociatedSubnets": associations
             })
 
-        # 서브넷에 라우팅 테이블 ID 할당
-        for route_table in vpc_info["RouteTables"]:
-            for subnet_id in route_table["AssociatedSubnets"]:
-                subnet = next((s for s in vpc_info["Subnets"] if s["Subnet ID"] == subnet_id), None)
-                if subnet:
-                    subnet["RouteTableID"] = route_table["Route Table ID"]
-
-        # 인터넷 게이트웨이 정보 추가
+        # Internet Gateway information
         internet_gateways = ec2.describe_internet_gateways(
             Filters=[{'Name': 'attachment.vpc-id', 'Values': [vpc_id]}]
         )['InternetGateways']
@@ -102,25 +104,10 @@ def get_vpc_details(vpc_id):
             igw_name = next((tag['Value'] for tag in igw.get("Tags", []) if tag["Key"] == "Name"), "N/A")
             vpc_info["InternetGateway"] = {"GatewayId": igw.get("InternetGatewayId"), "Name": igw_name}
 
-        # 인스턴스 정보 추가
-        instances = ec2.describe_instances(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])['Reservations']
-        for reservation in instances:
-            for instance in reservation['Instances']:
-                instance_name = next((tag['Value'] for tag in instance.get("Tags", []) if tag["Key"] == "Name"), "N/A")
-                vpc_info["Instances"].append({
-                    "Instance ID": instance.get("InstanceId"),
-                    "Instance Type": instance.get("InstanceType"),
-                    "State": instance['State']['Name'],
-                    "Private IP": instance.get("PrivateIpAddress", "N/A"),
-                    "Public IP": instance.get("PublicIpAddress", "N/A"),
-                    "Subnet ID": instance.get("SubnetId"),
-                    "Name": instance_name
-                })
-
         return jsonify(vpc_info)
     except Exception as e:
+        print(f"Error in get_vpc_details: {e}")
         return jsonify({"error": str(e)}), 500
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

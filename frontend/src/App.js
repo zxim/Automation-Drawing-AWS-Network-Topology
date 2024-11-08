@@ -10,12 +10,12 @@ function App() {
     const [vpcDetails, setVpcDetails] = useState(null);
     const [topologyData, setTopologyData] = useState(null);
 
-    const region = "ap-northeast-2"; // 예시: 서울 리전
+    const region = "ap-northeast-2";
 
     useEffect(() => {
         fetch('/vpcs')
             .then(response => response.json())
-            .then(data => setVpcs(data))
+            .then(data => setVpcs(data || []))
             .catch(error => console.error('Error fetching VPCs:', error));
     }, []);
 
@@ -25,32 +25,19 @@ function App() {
             fetch(`/vpcs/${vpcId}`)
                 .then(response => response.json())
                 .then(data => {
-                    data.RouteTables.forEach(routeTable => {
-                        if (routeTable.Associations) {
-                            routeTable.Associations.forEach(assoc => {
-                                const subnetId = assoc;
-                                if (subnetId) {
-                                    const subnet = data.Subnets.find(s => s["Subnet ID"] === subnetId);
-                                    if (subnet) {
-                                        subnet["RouteTableID"] = routeTable["Route Table ID"];
-                                    }
-                                }
-                            });
-                        }
-                    });
                     data.State = region;
                     setVpcDetails(data);
 
-                    // Create topology data from VPC details
                     const topology = {
-                        regionName: region,  // 리전 이름 추가
+                        regionName: region,
                         vpcName: data.Name || data["VPC ID"],
-                        azs: data.Subnets.reduce((acc, subnet) => {
+                        azs: (data.Subnets || []).reduce((acc, subnet) => {
                             const az = acc.find(a => a.name === subnet["Availability Zone"]);
                             if (az) {
                                 az.subnets.push({
                                     name: subnet.Name || subnet["Subnet ID"],
-                                    instances: data.Instances.filter(
+                                    isNatConnected: subnet.isNatConnected,
+                                    instances: (data.Instances || []).filter(
                                         instance => instance["Subnet ID"] === subnet["Subnet ID"]
                                     ).map(instance => ({
                                         name: instance.Name || instance["Instance ID"],
@@ -62,7 +49,8 @@ function App() {
                                     subnets: [
                                         {
                                             name: subnet.Name || subnet["Subnet ID"],
-                                            instances: data.Instances.filter(
+                                            isNatConnected: subnet.isNatConnected,
+                                            instances: (data.Instances || []).filter(
                                                 instance => instance["Subnet ID"] === subnet["Subnet ID"]
                                             ).map(instance => ({
                                                 name: instance.Name || instance["Instance ID"],
@@ -140,7 +128,7 @@ function App() {
                                     )}
 
                                     <h3>Subnets</h3>
-                                    {vpcDetails.Subnets.length > 0 ? (
+                                    {(vpcDetails.Subnets || []).length > 0 ? (
                                         <table border="1">
                                             <thead>
                                                 <tr>
