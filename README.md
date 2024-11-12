@@ -1,5 +1,5 @@
 ## Velog Link
-**👉 See more contents. Click my [Velog Link](https://velog.io/@tlaals44/series)** [![Velog](https://img.shields.io/badge/Velog-20C997?style=for-the-badge&logo=Velog&logoColor=white)](https://velog.io/@tlaals44/series)
+**👉 See more contents. Click my [Velog Link](https://velog.io/@tlaals44/%EC%82%AC%EC%9D%B4%EB%93%9C-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8)** [![Velog](https://img.shields.io/badge/Velog-20C997?style=for-the-badge&logo=Velog&logoColor=white)](https://velog.io/@tlaals44/%EC%82%AC%EC%9D%B4%EB%93%9C-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8)
 
 <br>
 
