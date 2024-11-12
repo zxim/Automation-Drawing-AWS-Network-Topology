@@ -6,16 +6,17 @@ const TopologyDiagram = ({ topologyData, regionName }) => {
 
     // Constants for dimensions
     const regionWidth = 1200;
-    const regionHeight = 850;  // 리전 박스의 높이를 살짝 증가
-    const vpcHeight = 850;     // VPC 박스의 높이를 살짝 증가
+    const regionHeight = 850;
+    // eslint-disable-next-line no-unused-vars
+    const vpcHeight = 850;
     const subnetWidth = 200;
     const subnetHeight = 200;
     const azWidth = topologyData && topologyData.azs.length > 0 
         ? (topologyData.azs[0].subnets.length * subnetWidth) - 50 
         : 400;
-    const azHeight = 250;  // AZ 박스 세로 길이 감소
-    const regionToVpcSpacing = 200;  // 리전과 VPC 간의 거리 증가
-    const vpcToAzSpacing = 100;      // VPC와 AZ 간의 거리 증가
+    const azHeight = 250;
+    const regionToVpcSpacing = 200;
+    const vpcToAzSpacing = 100;
     const azSpacing = 50; 
     const subnetSpacing = 50;
     const instanceSize = 80;
@@ -105,7 +106,7 @@ const TopologyDiagram = ({ topologyData, regionName }) => {
                     style: {
                         'background-opacity': 0,
                         'border-width': 3,
-                        'border-color': '#4b8bbe',
+                        'border-color': '#3c3c3c',
                         'label': 'data(label)',
                         'width': regionWidth,
                         'height': regionHeight,
@@ -136,7 +137,7 @@ const TopologyDiagram = ({ topologyData, regionName }) => {
                     style: {
                         'background-opacity': 0,
                         'border-width': 2,
-                        'border-color': '#33a02c',
+                        'border-color': '#00EBFF',
                         'label': 'data(label)',
                         'width': azWidth,
                         'height': azHeight,
@@ -149,7 +150,6 @@ const TopologyDiagram = ({ topologyData, regionName }) => {
                     style: {
                         'background-opacity': 0,
                         'border-width': 2,
-                        'border-color': '#ff7f00',
                         'label': 'data(label)',
                         'text-valign': 'top',
                         'text-halign': 'center',
@@ -163,6 +163,7 @@ const TopologyDiagram = ({ topologyData, regionName }) => {
                 {
                     selector: '.public-subnet',
                     style: {
+                        'border-color': 'green',  // 퍼블릭 서브넷 테두리 초록색
                         'background-image': 'url("/icons/public-subnet.png")',
                         'background-width': '25px',
                         'background-height': '25px',
@@ -173,6 +174,7 @@ const TopologyDiagram = ({ topologyData, regionName }) => {
                 {
                     selector: '.private-subnet',
                     style: {
+                        'border-color': 'blue',  // 프라이빗 서브넷 테두리 파란색
                         'background-image': 'url("/icons/private-subnet.png")',
                         'background-width': '25px',
                         'background-height': '25px',
