@@ -1,9 +1,13 @@
-# 해당 코드는 아직 미완성인 진행 중인 프로젝트입니다
-# Create a .env File in the Root Directory
+## Velog Link
+**👉 See more contents. Click my [Velog Link](https://velog.io/@tlaals44/series)** [![Velog](https://img.shields.io/badge/Velog-20C997?style=for-the-badge&logo=Velog&logoColor=white)](https://velog.io/@tlaals44/series)
+
+<br>
+
+# Create a .env File in the Root Directory(project)
 ## .env File Contents
 **AWS_ACCESS_KEY_ID**: The Access Key ID issued when creating the IAM user <br>
 **AWS_SECRET_ACCESS_KEY**: The Secret Access Key associated with the IAM user  <br>
-**AWS_REGION**: The AWS region, for example, 'ap-northeast-2'  <br>
+**AWS_REGION**: The AWS region    for example: 'ap-northeast-2'  <br>
 
 <br>
 
@@ -58,3 +62,11 @@ Description: This role is designated for monitoring the performance and health o
 Install Docker and Docker-Compose
 Install Node.js and npm
 Install Python
+
+
+## How to Start
+cd project  (root directory)
+docker-compose up --build
+go to url: localhost:3000
+
+
