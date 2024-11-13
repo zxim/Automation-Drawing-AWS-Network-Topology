@@ -32,34 +32,25 @@
 <br>
 
 ## IAM Account Creation and Role Assignments
-AWSServiceRoleForElasticLoadBalancing
-Trusted Entity: AWS Service (elasticloadbalancing)
-Description: This role is automatically created by AWS for use with the Elastic Load Balancing service, enabling it to perform tasks related to load balancers.
+### AWSServiceRoleForElasticLoadBalancing
+**Trusted Entity**: AWS Service (elasticloadbalancing) <br>
+**Description**: This role is automatically created by AWS for use with the Elastic Load Balancing service, enabling it to perform tasks related to load balancers.
 
-<br>
-
-## AWSServiceRoleForRDS
-**Trusted Entity**: AWS Service (rds)
+### AWSServiceRoleForRDS
+**Trusted Entity**: AWS Service (rds) <br>
 **Description**: This role is automatically created by AWS for Amazon RDS (Relational Database Service) and allows for monitoring and management tasks for database instances.
 
-<br>
-
-## AWSServiceRoleForSupport
-Trusted Entity: AWS Service (support)
-Description: This role is used by the AWS Support service to handle and manage support requests.
-
-
-<br>
+### AWSServiceRoleForSupport 
+**Trusted Entity**: AWS Service (support) <br>
+**Description**: This role is used by the AWS Support service to handle and manage support requests.
 
 ## AWSServiceRoleForTrustedAdvisor
-Trusted Entity: AWS Service (trustedadvisor)
-Description: This role is used by the AWS Trusted Advisor service to review best practices and provide recommendations for your AWS environment.
-
-<br>
+**Trusted Entity**: AWS Service (trustedadvisor) <br>
+**Description**: This role is used by the AWS Trusted Advisor service to review best practices and provide recommendations for your AWS environment.
 
 ## rds-monitoring-role
-Trusted Entity: AWS Service (monitoring.rds)
-Description: This role is designated for monitoring the performance and health of RDS instances.
+**Trusted Entity**: AWS Service (monitoring.rds) <br>
+**Description**: This role is designated for monitoring the performance and health of RDS instances.
 
 <br>
 
