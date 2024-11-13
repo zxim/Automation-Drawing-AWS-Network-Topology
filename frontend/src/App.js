@@ -156,6 +156,32 @@ function App() {
                                     ) : (
                                         <p>No subnets available for this VPC.</p>
                                     )}
+
+                                    <h3>Instances</h3>
+                                    {(vpcDetails.Instances || []).length > 0 ? (
+                                        <table border="1">
+                                            <thead>
+                                                <tr>
+                                                    <th>Instance ID</th>
+                                                    <th>Instance Type</th>
+                                                    <th>Availability Zone</th>
+                                                    <th>State</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {vpcDetails.Instances.map((instance, index) => (
+                                                    <tr key={index}>
+                                                        <td>{instance["Instance ID"]}</td>
+                                                        <td>{instance.InstanceType}</td>
+                                                        <td>{instance.AvailabilityZone}</td>
+                                                        <td>{instance.State}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <p>No instances available for this VPC.</p>
+                                    )}
                                 </div>
                             )}
                         </div>
