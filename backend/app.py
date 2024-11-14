@@ -1,31 +1,42 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-from dotenv import load_dotenv
-import os
 import boto3
 
 app = Flask(__name__)
 CORS(app)
-load_dotenv()
 
-def create_aws_session():
-    aws_access_key = os.getenv('AWS_ACCESS_KEY_ID')
-    aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
-    aws_region = os.getenv('AWS_REGION')
-
-    if not aws_access_key or not aws_secret_key or not aws_region:
-        raise ValueError("Missing AWS credentials")
-
+def create_aws_session(aws_access_key, aws_secret_key, aws_region):
     return boto3.Session(
         aws_access_key_id=aws_access_key,
         aws_secret_access_key=aws_secret_key,
         region_name=aws_region
     )
 
-@app.route('/vpcs', methods=['GET'])
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    aws_access_key = data.get('accessKeyId')
+    aws_secret_key = data.get('secretAccessKey')
+    aws_region = data.get('region', 'ap-northeast-2')  # 기본 리전 설정
+
+    try:
+        session = create_aws_session(aws_access_key, aws_secret_key, aws_region)
+        ec2 = session.client('ec2')
+        ec2.describe_vpcs()  # VPC 조회로 자격 증명 검증
+        return jsonify({"message": "로그인 성공"}), 200
+    except Exception as e:
+        print(f"Login error: {e}")
+        return jsonify({"error": "잘못된 자격 증명입니다."}), 401
+
+@app.route('/vpcs', methods=['POST'])
 def list_vpcs():
     try:
-        session = create_aws_session()
+        data = request.json
+        aws_access_key = data.get('accessKeyId')
+        aws_secret_key = data.get('secretAccessKey')
+        aws_region = data.get('region', 'ap-northeast-2')
+
+        session = create_aws_session(aws_access_key, aws_secret_key, aws_region)
         ec2 = session.client('ec2')
         response = ec2.describe_vpcs()
 
@@ -45,10 +56,15 @@ def list_vpcs():
         print(f"Error in list_vpcs: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/vpcs/<vpc_id>', methods=['GET'])
+@app.route('/vpcs/<vpc_id>', methods=['POST'])
 def get_vpc_details(vpc_id):
     try:
-        session = create_aws_session()
+        data = request.json
+        aws_access_key = data.get('accessKeyId')
+        aws_secret_key = data.get('secretAccessKey')
+        aws_region = data.get('region', 'ap-northeast-2')
+
+        session = create_aws_session(aws_access_key, aws_secret_key, aws_region)
         ec2 = session.client('ec2')
 
         vpc_info = {
@@ -60,7 +76,7 @@ def get_vpc_details(vpc_id):
             "InternetGateway": None
         }
 
-        # Subnet information
+        # 서브넷 정보
         subnets = ec2.describe_subnets(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])['Subnets']
         for subnet in subnets:
             subnet_name = next((tag['Value'] for tag in subnet.get("Tags", []) if tag["Key"] == "Name"), "N/A")
@@ -71,16 +87,15 @@ def get_vpc_details(vpc_id):
                 "State": subnet.get("State"),
                 "Name": subnet_name,
                 "RouteTableID": None,
-                "isNatConnected": False  # 기본값 설정
+                "isNatConnected": False
             })
 
-        # Route Table information
+        # 라우트 테이블 정보
         route_tables = ec2.describe_route_tables(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])['RouteTables']
         for route_table in route_tables:
-            route_table_name = next((tag['Value'] for tag in route_table.get("Tags", []) if tag["Key"] == "Name"), "N/A")
             routes = [{"Destination": route.get("DestinationCidrBlock"), "Target": route.get("GatewayId", "N/A")} for route in route_table.get("Routes", [])]
             associations = [assoc.get("SubnetId") for assoc in route_table.get("Associations", []) if assoc.get("SubnetId")]
-            
+
             for subnet_id in associations:
                 subnet = next((s for s in vpc_info["Subnets"] if s["Subnet ID"] == subnet_id), None)
                 if subnet:
@@ -90,19 +105,39 @@ def get_vpc_details(vpc_id):
             vpc_info["RouteTables"].append({
                 "Route Table ID": route_table.get("RouteTableId"),
                 "Routes": routes,
-                "Name": route_table_name,
                 "AssociatedSubnets": associations
             })
 
-        # Internet Gateway information
-        internet_gateways = ec2.describe_internet_gateways(
-            Filters=[{'Name': 'attachment.vpc-id', 'Values': [vpc_id]}]
-        )['InternetGateways']
+        # 인터넷 게이트웨이 정보
+        internet_gateways = ec2.describe_internet_gateways(Filters=[{'Name': 'attachment.vpc-id', 'Values': [vpc_id]}])['InternetGateways']
         
         if internet_gateways:
             igw = internet_gateways[0]
             igw_name = next((tag['Value'] for tag in igw.get("Tags", []) if tag["Key"] == "Name"), "N/A")
             vpc_info["InternetGateway"] = {"GatewayId": igw.get("InternetGatewayId"), "Name": igw_name}
+
+        # EC2 인스턴스 정보
+        instances = ec2.describe_instances(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])['Reservations']
+        for reservation in instances:
+            for instance in reservation['Instances']:
+                instance_name = next((tag['Value'] for tag in instance.get("Tags", []) if tag["Key"] == "Name"), "N/A")
+                ami_id = instance.get("ImageId")
+                
+                # AMI 정보 가져오기
+                ami_info = ec2.describe_images(ImageIds=[ami_id])['Images'][0]
+                ami_name = ami_info.get("Name", "N/A")
+                ami_description = ami_info.get("Description", "N/A")
+
+                vpc_info["Instances"].append({
+                    "Instance ID": instance.get("InstanceId"),
+                    "InstanceType": instance.get("InstanceType"),
+                    "AvailabilityZone": instance.get("Placement", {}).get("AvailabilityZone"),
+                    "State": instance.get("State", {}).get("Name"),
+                    "Name": instance_name,
+                    "AMI ID": ami_id,
+                    "AMI Name": ami_name,
+                    "AMI Description": ami_description
+                })
 
         return jsonify(vpc_info)
     except Exception as e:
