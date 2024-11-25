@@ -12,6 +12,10 @@ def create_aws_session(aws_access_key, aws_secret_key, aws_region):
         region_name=aws_region
     )
 
+@app.route('/src/<path:filename>')
+def ignore_static_files(filename):
+    return jsonify({"error": "File not served by backend"}), 404
+
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -39,6 +43,7 @@ def list_vpcs():
         session = create_aws_session(aws_access_key, aws_secret_key, aws_region)
         ec2 = session.client('ec2')
         response = ec2.describe_vpcs()
+        
 
         vpc_data = [
             {
@@ -66,6 +71,9 @@ def get_vpc_details(vpc_id):
 
         session = create_aws_session(aws_access_key, aws_secret_key, aws_region)
         ec2 = session.client('ec2')
+        elbv2 = session.client('elbv2')
+        wafv2 = session.client('wafv2')
+        autoscaling = session.client('autoscaling')
 
         vpc_info = {
             "VPC ID": vpc_id,
@@ -73,7 +81,11 @@ def get_vpc_details(vpc_id):
             "Subnets": [],
             "RouteTables": [],
             "Instances": [],
-            "InternetGateway": None
+            "InternetGateway": None,
+            "ALBs": [],
+            "WAFs": [],
+            "AutoScalingInstances": [],
+            "NetworkACLs": []
         }
 
         # 서브넷 정보
@@ -138,6 +150,72 @@ def get_vpc_details(vpc_id):
                     "AMI Name": ami_name,
                     "AMI Description": ami_description
                 })
+
+                # ALB 정보 가져오기
+        try:
+            albs = elbv2.describe_load_balancers()
+            for alb in albs['LoadBalancers']:
+                if alb['VpcId'] == vpc_id:
+                    vpc_info["ALBs"].append({
+                        "LoadBalancerName": alb['LoadBalancerName'],
+                        "LoadBalancerArn": alb['LoadBalancerArn'],
+                        "DNSName": alb['DNSName'],
+                        "Scheme": alb['Scheme'],
+                        "State": alb['State']['Code']
+                    })
+        except Exception as e:
+            print(f"Error fetching ALBs: {e}")
+        
+        # WAF 정보 가져오기
+        try:
+            wafs = wafv2.list_web_acls(Scope='REGIONAL')
+            for waf in wafs['WebACLs']:
+                waf_details = wafv2.get_web_acl(Name=waf['Name'], Scope='REGIONAL', Id=waf['Id'])
+                vpc_info["WAFs"].append({
+                    "Name": waf['Name'],
+                    "Id": waf['Id'],
+                    "Arn": waf['ARN'],
+                    "Rules": waf_details['WebACL']['Rules']
+                })
+        except Exception as e:
+            print(f"Error fetching WAFs: {e}")
+
+        # Auto Scaling Instance 정보 가져오기
+        try:
+            asg_instances = autoscaling.describe_auto_scaling_instances()
+            for instance in asg_instances['AutoScalingInstances']:
+                if instance['VpcId'] == vpc_id:
+                    vpc_info["AutoScalingInstances"].append({
+                        "InstanceId": instance['InstanceId'],
+                        "AutoScalingGroupName": instance['AutoScalingGroupName'],
+                        "LifecycleState": instance['LifecycleState'],
+                        "HealthStatus": instance['HealthStatus'],
+                        "AvailabilityZone": instance['AvailabilityZone']
+                    })
+        except Exception as e:
+            print(f"Error fetching Auto Scaling Instances: {e}")
+
+        # Network ACL 정보 가져오기
+        try:
+            acls = ec2.describe_network_acls(Filters=[{'Name': 'vpc-id', 'Values': [vpc_id]}])
+            for acl in acls['NetworkAcls']:
+                entries = [
+                    {
+                        "RuleNumber": entry['RuleNumber'],
+                        "Protocol": entry['Protocol'],
+                        "RuleAction": entry['RuleAction'],
+                        "Egress": entry['Egress'],
+                        "CidrBlock": entry.get('CidrBlock', 'N/A')
+                    }
+                    for entry in acl['Entries']
+                ]
+                vpc_info["NetworkACLs"].append({
+                    "AclId": acl['NetworkAclId'],
+                    "IsDefault": acl['IsDefault'],
+                    "Entries": entries
+                })
+        except Exception as e:
+            print(f"Error fetching NetworkACLs: {e}")
 
         return jsonify(vpc_info)
     except Exception as e:

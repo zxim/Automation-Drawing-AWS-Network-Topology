@@ -88,7 +88,7 @@ const TopologyDiagram = ({ topologyData, regionName }) => {
                 elements.push({
                     data: {
                         id: isNatConnected ? `nat-info-${azIndex}-${subnetIndex}` : `private-instance-${azIndex}-${subnetIndex}`,
-                        label: isNatConnected ? 'NAT' : 'Private Instance',
+                        label: isNatConnected ? 'Public Instance' : 'Private Instance',
                         parent: subnetNodeId
                     },
                     classes: isNatConnected ? 'nat-info' : 'private-instance',

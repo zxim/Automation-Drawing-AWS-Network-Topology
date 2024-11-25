@@ -217,8 +217,134 @@ function App() {
                                             ) : (
                                                 <p>이 VPC에는 인스턴스가 없습니다.</p>
                                             )}
+
+                                            <h3>ALBs (Application Load Balancers)</h3>
+                                            {(vpcDetails.ALBs || []).length > 0 ? (
+                                                <table border="1">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>ALB 이름</th>
+                                                            <th>ALB ARN</th>
+                                                            <th>DNS 이름</th>
+                                                            <th>스킴</th>
+                                                            <th>상태</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {vpcDetails.ALBs.map((alb, index) => (
+                                                            <tr key={index}>
+                                                                <td>{alb.LoadBalancerName}</td>
+                                                                <td>{alb.LoadBalancerArn}</td>
+                                                                <td>{alb.DNSName}</td>
+                                                                <td>{alb.Scheme}</td>
+                                                                <td>{alb.State}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            ) : (
+                                                <p>ALB 데이터가 없습니다.</p>
+                                            )}
+
+                                            <h3>WAFs (Web Application Firewalls)</h3>
+                                            {(vpcDetails.WAFs || []).length > 0 ? (
+                                                <table border="1">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>WAF 이름</th>
+                                                            <th>WAF ID</th>
+                                                            <th>ARN</th>
+                                                            <th>규칙</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {vpcDetails.WAFs.map((waf, index) => (
+                                                            <tr key={index}>
+                                                                <td>{waf.Name}</td>
+                                                                <td>{waf.Id}</td>
+                                                                <td>{waf.Arn}</td>
+                                                                <td>
+                                                                    {waf.Rules.length > 0 ? (
+                                                                        <ul>
+                                                                            {waf.Rules.map((rule, idx) => (
+                                                                                <li key={idx}>{rule.Name || 'N/A'}</li>
+                                                                            ))}
+                                                                        </ul>
+                                                                    ) : (
+                                                                        '규칙 없음'
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            ) : (
+                                                <p>WAF 데이터가 없습니다.</p>
+                                            )}
+
+                                            <h3>Auto Scaling Instances</h3>
+                                                {(vpcDetails.AutoScalingInstances || []).length > 0 ? (
+                                                    <table border="1">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>인스턴스 ID</th>
+                                                                <th>Auto Scaling 그룹 이름</th>
+                                                                <th>라이프사이클 상태</th>
+                                                                <th>헬스 상태</th>
+                                                                <th>가용 영역</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {vpcDetails.AutoScalingInstances.map((instance, index) => (
+                                                                <tr key={index}>
+                                                                    <td>{instance.InstanceId}</td>
+                                                                    <td>{instance.AutoScalingGroupName || 'N/A'}</td>
+                                                                    <td>{instance.LifecycleState}</td>
+                                                                    <td>{instance.HealthStatus}</td>
+                                                                    <td>{instance.AvailabilityZone}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                ) : (
+                                                    <p>Auto Scaling Instance 데이터가 없습니다.</p>
+                                                )}
+
+
+                                            <h3>Network ACLs</h3>
+                                            {(vpcDetails.NetworkACLs || []).length > 0 ? (
+                                                <table border="1">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>ACL ID</th>
+                                                            <th>기본 여부</th>
+                                                            <th>규칙</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {vpcDetails.NetworkACLs.map((acl, index) => (
+                                                            <tr key={index}>
+                                                                <td>{acl.AclId}</td>
+                                                                <td>{acl.IsDefault ? '기본' : '사용자 정의'}</td>
+                                                                <td>
+                                                                    <ul>
+                                                                        {acl.Entries.map((entry, idx) => (
+                                                                            <li key={idx}>
+                                                                                {`Rule#: ${entry.RuleNumber}, Action: ${entry.RuleAction}, Protocol: ${entry.Protocol}, CIDR: ${entry.CidrBlock || 'N/A'}`}
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            ) : (
+                                                <p>네트워크 ACL 데이터가 없습니다.</p>
+                                            )}
                                         </div>
                                     )}
+
                                 </div>
                             }
                         />
